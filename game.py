@@ -15,23 +15,7 @@ size = (800, 600)
 screen = pygame.display.set_mode(size)
 pygame.display.set_caption("pong")
 
-# Starting coordinates of the paddle
-rect_x = 400
-rect_y = 580
 
-# initial speed of the paddle
-rect_change_x = 0
-rect_change_y = 0
-
-# initial position of the ball
-ball_x = 50
-ball_y = 50
-
-# speed of the ball
-ball_change_x = 5
-ball_change_y = 5
-
-score = 0
 
 # draws the paddle. Also restricts its movement between the edges
 # of the window.
@@ -42,59 +26,73 @@ def drawrect(screen, x, y):
         x = 699
     pygame.draw.rect(screen, RED, [x, y, 100, 20])
 
-# game's main loop
-done = False
-clock = pygame.time.Clock()
-while not done:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            done = True
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_LEFT:
-                rect_change_x = -6
-            elif event.key == pygame.K_RIGHT:
-                rect_change_x = 6
-        elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                rect_change_x = 0
-    screen.fill(BLACK)
-    rect_x += rect_change_x
-    ball_x += ball_change_x
-    ball_y += ball_change_y
 
-    if(rect_x < 0):
-        rect_x = 0
-    elif(rect_x > 700):
-        rect_x = 700
+class Game:
+    def __init__(self):
+        # Starting coordinates of the paddle
+        self.rect_x = 400
+        self.rect_y = 580
 
-    # this handles the movement of the ball.
-    if ball_x < 0:
-        ball_x = 0
-        ball_change_x = ball_change_x * -1
-    elif ball_x > 785:
-        ball_x = 785
-        ball_change_x = ball_change_x * -1
-    elif ball_y < 0:
-        ball_y = 0
-        ball_change_y = ball_change_y * -1
-    elif ball_x > rect_x and ball_x < rect_x + 100 and ball_y == 565:
-        ball_change_y = ball_change_y * -1
-        score = score + 1
-        print("score increased!")
-    elif ball_y > 600:
-        ball_change_y = ball_change_y * -1
-        score = 0
-        print("score reset!")
-    pygame.draw.rect(screen, WHITE, [ball_x, ball_y, 15, 15])
+        # initial position of the ball
+        self.ball_x = 50
+        self.ball_y = 50
 
-    drawrect(screen, rect_x, rect_y)
+        # speed of the ball
+        self.ball_change_x = 5
+        self.ball_change_y = 5
 
-    # score board
-    font = pygame.font.SysFont('Calibri', 15, False, False)
-    text = font.render("Score = " + str(score), True, WHITE)
-    screen.blit(text, [600, 100])
+        self.score = 0
 
-    pygame.display.flip()
-    clock.tick(60)
+        self.clock = pygame.time.Clock()
 
-pygame.quit()
+
+    def play_step(self, move):
+        # move left
+        if move == 0:
+            self.rect_x -= 6
+        elif move == 1:
+            self.rect_x += 6
+
+        if self.rect_x < 0:
+            self.rect_x = 0
+        elif self.rect_x > 700:
+            self.rect_x = 700
+
+        screen.fill(BLACK)
+        self.ball_x += self.ball_change_x
+        self.ball_y += self.ball_change_y
+
+
+        # this handles the movement of the ball.
+        if self.ball_x < 0:
+            self.ball_x = 0
+            self.ball_change_x = self.ball_change_x * -1
+        elif self.ball_x > 785:
+            self.ball_x = 785
+            self.ball_change_x = self.ball_change_x * -1
+        elif self.ball_y < 0:
+            self.ball_y = 0
+            self.ball_change_y = self.ball_change_y * -1
+        elif self.rect_x < self.ball_x < self.rect_x + 100 and self.ball_y == 565:
+            self.ball_change_y = self.ball_change_y * -1
+            self.score = self.score + 1
+        elif self.ball_y > 600:
+            self.ball_change_y = self.ball_change_y * -1
+            self.score = 0
+        pygame.draw.rect(screen, WHITE, [self.ball_x, self.ball_y, 15, 15])
+
+        drawrect(screen, self.rect_x, self.rect_y)
+
+        # score board
+        font = pygame.font.SysFont('Calibri', 15, False, False)
+        text = font.render("Score = " + str(self.score), True, WHITE)
+        screen.blit(text, [600, 100])
+
+        pygame.display.flip()
+        self.clock.tick(60)
+
+
+game = Game()
+
+while True:
+    game.play_step(0)
