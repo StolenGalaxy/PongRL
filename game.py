@@ -47,6 +47,8 @@ class Game:
 
 
     def play_step(self, move):
+        reward = 0
+
         # move left
         if move == 0:
             self.rect_x -= 6
@@ -73,12 +75,20 @@ class Game:
         elif self.ball_y < 0:
             self.ball_y = 0
             self.ball_change_y = self.ball_change_y * -1
+
+        # ball hits rectangle
         elif self.rect_x < self.ball_x < self.rect_x + 100 and self.ball_y == 565:
             self.ball_change_y = self.ball_change_y * -1
             self.score = self.score + 1
+
+            reward = 10
+        # ball hits bottom of screen
         elif self.ball_y > 600:
             self.ball_change_y = self.ball_change_y * -1
             self.score = 0
+
+            reward = -10
+
         pygame.draw.rect(screen, WHITE, [self.ball_x, self.ball_y, 15, 15])
 
         drawrect(screen, self.rect_x, self.rect_y)
@@ -90,6 +100,8 @@ class Game:
 
         pygame.display.flip()
         self.clock.tick(60)
+
+        return reward
 
 
 game = Game()
