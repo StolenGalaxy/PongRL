@@ -64,7 +64,7 @@ class Game:
         reward = 0
         terminated = False
 
-        # move left
+        # if the action is 0 move left, 1 move right, else don't move
         if move == 0:
             self.rect_x -= 6
         elif move == 1:
