@@ -10,12 +10,6 @@ BLUE = (0, 0, 255)
 
 pygame.init()
 
-# Initializing the display window
-size = (800, 600)
-screen = pygame.display.set_mode(size)
-pygame.display.set_caption("pong")
-
-
 
 # draws the paddle. Also restricts its movement between the edges
 # of the window.
@@ -28,7 +22,14 @@ def drawrect(screen, x, y):
 
 
 class Game:
-    def __init__(self):
+    def __init__(self, render):
+
+        if render:
+            # Initializing the display window
+            size = (800, 600)
+            self.screen = pygame.display.set_mode(size)
+            pygame.display.set_caption("pong")
+
         # Starting coordinates of the paddle
         self.rect_x = 400
         self.rect_y = 580
@@ -42,7 +43,7 @@ class Game:
         self.ball_change_y = 5
 
         self.score = 0
-
+        self.render = render
         self.clock = pygame.time.Clock()
 
 
@@ -60,7 +61,6 @@ class Game:
         elif self.rect_x > 700:
             self.rect_x = 700
 
-        screen.fill(BLACK)
         self.ball_x += self.ball_change_x
         self.ball_y += self.ball_change_y
 
@@ -89,22 +89,19 @@ class Game:
 
             reward = -10
 
-        pygame.draw.rect(screen, WHITE, [self.ball_x, self.ball_y, 15, 15])
+        if self.render:
+            self.screen.fill(BLACK)
 
-        drawrect(screen, self.rect_x, self.rect_y)
+            pygame.draw.rect(self.screen, WHITE, [self.ball_x, self.ball_y, 15, 15])
 
-        # score board
-        font = pygame.font.SysFont('Calibri', 15, False, False)
-        text = font.render("Score = " + str(self.score), True, WHITE)
-        screen.blit(text, [600, 100])
+            drawrect(self.screen, self.rect_x, self.rect_y)
 
-        pygame.display.flip()
+            # score board
+            font = pygame.font.SysFont('Calibri', 15, False, False)
+            text = font.render("Score = " + str(self.score), True, WHITE)
+            self.screen.blit(text, [600, 100])
+
+            pygame.display.flip()
         self.clock.tick(60)
 
         return reward
-
-
-game = Game()
-
-while True:
-    game.play_step(0)
