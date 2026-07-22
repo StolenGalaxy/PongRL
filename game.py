@@ -1,4 +1,5 @@
 # https://github.com/skar91/pong-python
+import random
 
 import pygame
 
@@ -46,9 +47,22 @@ class Game:
         self.render = render
         self.clock = pygame.time.Clock()
 
+    def reset(self):
+        self.rect_x = random.randint(0, 700)
+        self.rect_y = 580
+
+        self.ball_x = random.randint(0, 785)
+        self.ball_y = 50
+
+        self.ball_change_x = 5
+        self.ball_change_y = 5
+
+        self.score = 0
+
 
     def play_step(self, move):
         reward = 0
+        terminated = False
 
         # move left
         if move == 0:
@@ -88,6 +102,7 @@ class Game:
             self.score = 0
 
             reward = -10
+            terminated = True
 
         if self.render:
             self.screen.fill(BLACK)
@@ -104,4 +119,4 @@ class Game:
             pygame.display.flip()
         self.clock.tick(60)
 
-        return reward
+        return reward, terminated
