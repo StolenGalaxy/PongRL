@@ -117,6 +117,7 @@ class Game:
             self.screen.blit(text, [600, 100])
 
             pygame.display.flip()
-        self.clock.tick(60)
+        if self.render:
+            self.clock.tick(60)
 
         return reward, terminated
