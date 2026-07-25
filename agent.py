@@ -157,6 +157,17 @@ class Agent:
                     memory.append((state, action_tensor, new_state, reward_tensor, terminated))
                     step_count += 1
 
+                    if len(memory) > self.mini_batch_size:
+                        # retrieve a batch of samples from memory
+                        mini_batch = memory.sample(self.mini_batch_size)
+
+                        self.optimise(mini_batch, policy_dqn, target_dqn)
+
+                        # if enough steps have been taken, sync the networks
+                        if step_count > self.network_sync_rate:
+                            target_dqn.load_state_dict(policy_dqn.state_dict())
+                            step_count = 0
+
             rewards_per_episode.append(episode_reward)
 
             if training:
@@ -170,17 +181,6 @@ class Agent:
             # decrease epsilon
             epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
             epsilon_history.append(epsilon)
-
-            if len(memory) > self.mini_batch_size:
-                # retrieve a batch of samples from memory
-                mini_batch = memory.sample(self.mini_batch_size)
-
-                self.optimise(mini_batch, policy_dqn, target_dqn)
-
-                # if enough steps have been taken, sync the networks
-                if step_count > self.network_sync_rate:
-                    target_dqn.load_state_dict(policy_dqn.state_dict())
-                    step_count = 0
 
     def optimise(self, mini_batch, policy_dqn, target_dqn):
         # we calculate the predicted q value (our current guess) and the target q value
