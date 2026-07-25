@@ -1,3 +1,5 @@
+from datetime import datetime
+import os
 import random
 
 import torch
@@ -12,13 +14,18 @@ import itertools
 
 import yaml
 
+# Folder to store runs and trained model in
+MODEL_DIR = "model"
+os.makedirs(MODEL_DIR, exist_ok=True)
+
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 class Agent:
     def __init__(self, hyperparameter_set):
+        self.hyperparameter_set = hyperparameter_set
         with open("hyperparameters.yml", "r") as file:
             all_hyperparameter_sets = yaml.safe_load(file)
-            hyperparameters = all_hyperparameter_sets[hyperparameter_set]
+            hyperparameters = all_hyperparameter_sets[self.hyperparameter_set]
 
         self.memory_size = hyperparameters["replay_memory_size"]
         self.mini_batch_size = hyperparameters["mini_batch_size"]
@@ -39,6 +46,9 @@ class Agent:
 
         # we set the optimiser later
         self.optimiser = None
+
+        # store data
+        self.MODEL_FILE = os.path.join(MODEL_DIR, f"{self.hyperparameter_set}.pt")
 
 
     def get_state(self, game: Game):
@@ -96,6 +106,13 @@ class Agent:
             # biases for it to update later when we call self.optimiser.step()
             self.optimiser = torch.optim.Adam(policy_dqn.parameters(), lr=self.learning_rate_alpha)
 
+            # track our highest reward
+            highest_reward = -99999999
+        else:
+            # load our saved model and set our policy network to evaluation mode
+            policy_dqn.load_state_dict(torch.load(self.MODEL_FILE))
+            policy_dqn.eval()
+
         rewards_per_episode = []
         epsilon_history = [self.epsilon_init]
 
@@ -141,6 +158,14 @@ class Agent:
                     step_count += 1
 
             rewards_per_episode.append(episode_reward)
+
+            if training:
+                if episode_reward > highest_reward:
+                    # if a new highest reward is achieved, log it, and save the model
+                    print(f"{datetime.now()}: New highest reward: {episode_reward}")
+                    highest_reward = episode_reward
+
+                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
 
             # decrease epsilon
             epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
