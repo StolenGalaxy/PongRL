@@ -1,6 +1,7 @@
 import random
 
 import torch
+from torch import nn
 
 from game import Game
 from dqn import DQN
@@ -24,6 +25,20 @@ class Agent:
         self.epsilon_init = hyperparameters["epsilon_init"]
         self.epsilon_decay = hyperparameters["epsilon_decay"]
         self.epsilon_min = hyperparameters["epsilon_min"]
+        self.network_sync_rate = hyperparameters["network_sync_rate"]
+
+        # how much should the network adjust parameters at each step of optimisation
+        # if it 'learns' too quickly, it may learn incorrectly
+        self.learning_rate_alpha = hyperparameters["learning_rate_alpha"]
+
+        # how much should the network value immediate rewards over future ones
+        self.discount_factor_gamma = hyperparameters["discount_factor_gamma"]
+
+        # use MSE as the loss function
+        self.loss_fn = nn.MSELoss()
+
+        # we set the optimiser later
+        self.optimiser = None
 
 
     def get_state(self, game: Game):
@@ -72,8 +87,17 @@ class Agent:
 
             epsilon = self.epsilon_init
 
+            target_dqn = DQN(5, 3).to(device)
+            target_dqn.load_state_dict(policy_dqn.state_dict())
+            step_count = 0
+
+            # use the Adam optimiser (gradient descent is another example of an optimiser)
+            # we pass in policy_dqn.parameters(), essentially providing Adam the memory references to the weights and
+            # biases for it to update later when we call self.optimiser.step()
+            self.optimiser = torch.optim.Adam(policy_dqn.parameters(), lr=self.learning_rate_alpha)
+
         rewards_per_episode = []
-        epsilon_history = []
+        epsilon_history = [self.epsilon_init]
 
         # an episode is essentially one game
         # itertools.count is essentially a nice way of an infinite loop where we can track what number we are on
@@ -113,13 +137,74 @@ class Agent:
                     action_tensor = torch.tensor([action], dtype=torch.float32, device=device)
                     reward_tensor = torch.tensor([reward], dtype=torch.float32, device=device)
 
-                    memory.append((state, action_tensor, new_state, reward_tensor))
+                    memory.append((state, action_tensor, new_state, reward_tensor, terminated))
+                    step_count += 1
 
             rewards_per_episode.append(episode_reward)
 
             # decrease epsilon
-            epsilon_history.append(epsilon)
             epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
+            epsilon_history.append(epsilon)
 
+            if len(memory) > self.mini_batch_size:
+                # retrieve a batch of samples from memory
+                mini_batch = memory.sample(self.mini_batch_size)
+
+                self.optimise(mini_batch, policy_dqn, target_dqn)
+
+                # if enough steps have been taken, sync the networks
+                if step_count > self.network_sync_rate:
+                    target_dqn.load_state_dict(policy_dqn.state_dict())
+                    step_count = 0
+
+    def optimise(self, mini_batch, policy_dqn, target_dqn):
+        # we calculate the predicted q value (our current guess) and the target q value
+        # then we use a loss function (in this case, MSE) to calculate the difference between the guess and the target
+        # then use an optimiser (in this case, Adam) to adjust the policy network's weights so it's next guess
+        # will be closer to the target
+        states, actions, new_states, rewards, terminations = zip(*mini_batch)
+
+
+        # why do we use torch.cat?
+        # for example, for the states:
+        # each state is represented by a tensor containing 5 different values
+        # so states is essentially 32 * [5]
+        # however, for pytorch to process these states, we want them to be one big [32, 5] tensor
+        # this is what torch.cat (concatenate) does. It groups them all into one big tensor.
+        states = torch.cat(states)
+        actions = torch.cat(actions).long()
+        new_states = torch.cat(new_states)
+        rewards = torch.cat(rewards)
+
+        terminations = torch.tensor(terminations).float().to(device)
+
+
+        with torch.no_grad():
+            # if a termination is true (1), target_q = reward + 0 * ... = reward
+            # this is because if the game was terminated, there are no future rewards
+
+            # this is the Bellman Equation
+            # Q(s, a) = R + discount factor (gamma) * maximum of all future rewards
+
+            # remember we are performing this for every experience at once
+            target_q = rewards + (1-terminations) * self.discount_factor_gamma * target_dqn(new_states).max(dim=1)[0]
+
+
+        # current_q is the policy network's guess of how valuable each action is
+        # target_q is the target network's more accurate calculation of what it was worth
+        current_q = policy_dqn(states).gather(dim=1, index=actions.unsqueeze(1)).squeeze()
+
+        # calculate loss (difference between the predicted reward for each action and the actual reward)
+        # the loss function we are using is MSE (mean squared error)
+        loss = self.loss_fn(current_q, target_q)
+
+        self.optimiser.zero_grad() # Clear any gradients from the optimiser
+
+        loss.backward() # Now we finally have the loss, the difference between our estimated q and the target q
+        # We don't actually need this value for any calculation. We instead call loss.backward(). This goes back
+        # through the entire calculation that was performed to reach it, and records the gradients used.
+
+        self.optimiser.step() # Finally, with these new gradients, update the network parameters (weights and biases)
+        # to ensure predicted q values are more accurate in the future
 
 Agent("oneplayerpong").run()
