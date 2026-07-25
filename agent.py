@@ -33,6 +33,7 @@ class Agent:
         self.epsilon_decay = hyperparameters["epsilon_decay"]
         self.epsilon_min = hyperparameters["epsilon_min"]
         self.network_sync_rate = hyperparameters["network_sync_rate"]
+        self.model_save_rate = hyperparameters["model_save_rate_games"]
 
         # how much should the network adjust parameters at each step of optimisation
         # if it 'learns' too quickly, it may learn incorrectly
@@ -172,10 +173,12 @@ class Agent:
 
             if training:
                 if episode_reward > highest_reward:
-                    # if a new highest reward is achieved, log it, and save the model
+                    # if a new highest reward is achieved, log it, and ensure the model is saved
                     print(f"{datetime.now()}: New highest reward: {episode_reward}")
                     highest_reward = episode_reward
 
+                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
+                elif not episode % self.model_save_rate:
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
 
             # decrease epsilon

@@ -7,3 +7,4 @@ oneplayerpong:
   network_sync_rate: 1000
   learning_rate_alpha: 0.0001
   discount_factor_gamma: 0.99
+  model_save_rate_games: 5
