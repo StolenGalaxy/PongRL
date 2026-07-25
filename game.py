@@ -54,8 +54,8 @@ class Game:
         self.ball_x = random.randint(0, 785)
         self.ball_y = 50
 
-        self.ball_change_x = 5
-        self.ball_change_y = 5
+        self.ball_change_x = random.choice([-5, 5])
+        self.ball_change_y = random.choice([-5, 5])
 
         self.score = 0
 

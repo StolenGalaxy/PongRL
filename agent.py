@@ -181,9 +181,9 @@ class Agent:
                 elif not episode % self.model_save_rate:
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
 
-            # decrease epsilon
-            epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
-            epsilon_history.append(epsilon)
+                # decrease epsilon
+                epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
+                epsilon_history.append(epsilon)
 
     def optimise(self, mini_batch, policy_dqn, target_dqn):
         # we calculate the predicted q value (our current guess) and the target q value
