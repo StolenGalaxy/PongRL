@@ -170,21 +170,23 @@ class Agent:
                             target_dqn.load_state_dict(policy_dqn.state_dict())
                             step_count = 0
 
+                    # decrease epsilon
+                    epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
+                    epsilon_history.append(epsilon)
+
+
             rewards_per_episode.append(episode_reward)
 
             if training:
                 if episode_reward > highest_reward:
                     # if a new highest reward is achieved, log it, and ensure the model is saved
-                    print(f"{datetime.now()}: New highest reward: {episode_reward}")
+                    print(f"{datetime.now()} - Reward: {episode_reward} - Episode: {episode} - Epsilon: {epsilon}")
                     highest_reward = episode_reward
 
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE_BEST)
                 if not episode % self.model_save_rate:
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE_RECENT)
 
-                # decrease epsilon
-                epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)
-                epsilon_history.append(epsilon)
 
     def optimise(self, mini_batch, policy_dqn, target_dqn):
         # we calculate the predicted q value (our current guess) and the target q value
