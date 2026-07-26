@@ -49,7 +49,8 @@ class Agent:
         self.optimiser = None
 
         # store data
-        self.MODEL_FILE = os.path.join(MODEL_DIR, f"{self.hyperparameter_set}.pt")
+        self.MODEL_FILE_BEST = os.path.join(MODEL_DIR, f"{self.hyperparameter_set}_best.pt")
+        self.MODEL_FILE_RECENT = os.path.join(MODEL_DIR, f"{self.hyperparameter_set}_recent.pt")
 
 
     def get_state(self, game: Game):
@@ -86,7 +87,7 @@ class Agent:
         # state_tensor = torch.tensor([raw_state], dtype=...) which is generally preferred, however I have left
         # it this way to be more explicit to understand it
 
-    def run(self, training=True, render=True):
+    def run(self, training=True, render=False):
         game = Game(render)
 
         # the policy dqn is the active, working network that actually decides the agent's current actions
@@ -111,7 +112,7 @@ class Agent:
             highest_reward = -99999999
         else:
             # load our saved model and set our policy network to evaluation mode
-            policy_dqn.load_state_dict(torch.load(self.MODEL_FILE))
+            policy_dqn.load_state_dict(torch.load(self.MODEL_FILE_BEST))
             policy_dqn.eval()
 
         rewards_per_episode = []
@@ -177,9 +178,9 @@ class Agent:
                     print(f"{datetime.now()}: New highest reward: {episode_reward}")
                     highest_reward = episode_reward
 
-                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
-                elif not episode % self.model_save_rate:
-                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE)
+                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE_BEST)
+                if not episode % self.model_save_rate:
+                    torch.save(policy_dqn.state_dict(), self.MODEL_FILE_RECENT)
 
                 # decrease epsilon
                 epsilon = max(epsilon * self.epsilon_decay, self.epsilon_min)

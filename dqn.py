@@ -7,7 +7,7 @@ class DQN(nn.Module):
     # state_dim is the dimension of the input layer
     # action_dim is the dimension of the output layer
     # hidden_dim is the dimension of the hidden layer
-    def __init__(self, state_dim, action_dim, hidden_dim=64):
+    def __init__(self, state_dim, action_dim, hidden_dim=32):
         super().__init__()
 
         # define the layers
