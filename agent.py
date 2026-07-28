@@ -34,6 +34,7 @@ class Agent:
         self.epsilon_min = hyperparameters["epsilon_min"]
         self.network_sync_rate = hyperparameters["network_sync_rate"]
         self.model_save_rate = hyperparameters["model_save_rate_games"]
+        self.use_ddqn = hyperparameters["double_dqn"]
 
         # how much should the network adjust parameters at each step of optimisation
         # if it 'learns' too quickly, it may learn incorrectly
@@ -188,7 +189,7 @@ class Agent:
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE_RECENT)
 
 
-    def optimise(self, mini_batch, policy_dqn, target_dqn):
+    def optimise(self, mini_batch, policy_dqn: DQN, target_dqn: DQN):
         # we calculate the predicted q value (our current guess) and the target q value
         # then we use a loss function (in this case, MSE) to calculate the difference between the guess and the target
         # then use an optimiser (in this case, Adam) to adjust the policy network's weights so it's next guess
@@ -217,12 +218,44 @@ class Agent:
             # this is the Bellman Equation
             # Q(s, a) = R + discount factor (gamma) * maximum of all future rewards
 
+            # the Bellman Equation is for evaluating actions the agent has already taken:
+                        # s = the state we were in
+                        # a = the action we took
+            # the equation has two halves:
+                        # the left half (R) is the immediate reward that action led to
+
+                        # the right half (gamma * predicted maximum future reward) is a guess of how much reward that
+                        # move could lead us to in the future
+
             # remember we are performing this for every experience at once
-            target_q = rewards + (1-terminations) * self.discount_factor_gamma * target_dqn(new_states).max(dim=1)[0]
+
+            if not self.use_ddqn:
+                # in standard dqn, the target network is giving each action a score, and implicitly choosing what it
+                # believes to be the best one by giving it the highest score
+                target_q = rewards + (1 - terminations) * self.discount_factor_gamma * target_dqn(new_states).max(dim=1)[0]
+            else:
+                # in double dqn however, we let the policy dqn choose the best action and the target network
+                # gives it a score. This solves 'overestimation bias', where if the target network picks a bad action
+                # due to random noise, that noise also causes it to rate that action higher.
+
+                # Instead, with double dqn, as a different network is evaluating the best action to the one picking it,
+                # the chance of random noise producing an inflated score for a bad action is lower, because the chance
+                # of both networks experiencing the same random noise for an action at the same time is much lower
+                best_actions_from_policy = policy_dqn(new_states).argmax(dim=1)
+
+                # this is still the bellman equation like before (with standard dqn)
+                # but before, the target network scored future actions and chose the best one (implicitly by score)
+                # instead, here, the policy network has chosen the best action (its index with argmax), then we have
+                # gotten the target network to score every action, and retrieved the score for the best action only
+                # (since we are processing many states at once, .gather() is retrieving the scores for all the
+                # best actions using the list of indexes, best_actions_from_policy)
+                target_q = rewards + (1 - terminations) * self.discount_factor_gamma * target_dqn(new_states).gather(dim=1, index=best_actions_from_policy.unsqueeze(1)).squeeze()
 
 
-        # current_q is the policy network's guess of how valuable each action is
-        # target_q is the target network's more accurate calculation of what it was worth
+
+        # current_q is the policy network's guess of how valuable its actions were
+        # target_q is the more accurate calculation of what it was worth, using the bellman equation and
+        # both the policy and target network
         current_q = policy_dqn(states).gather(dim=1, index=actions.unsqueeze(1)).squeeze()
 
         # calculate loss (difference between the predicted reward for each action and the actual reward)

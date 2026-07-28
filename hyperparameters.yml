@@ -8,3 +8,4 @@ oneplayerpong:
   learning_rate_alpha: 0.0001
   discount_factor_gamma: 0.99
   model_save_rate_games: 5
+  double_dqn: True
