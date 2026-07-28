@@ -13,6 +13,7 @@ from experience_replay import ReplayMemory
 import itertools
 
 import yaml
+import argparse
 
 # Folder to store runs and trained model in
 MODEL_DIR = "model"
@@ -181,7 +182,7 @@ class Agent:
             if training:
                 if episode_reward > highest_reward:
                     # if a new highest reward is achieved, log it, and ensure the model is saved
-                    print(f"{datetime.now()} - Reward: {episode_reward} - Episode: {episode} - Epsilon: {epsilon}")
+                    print(f"{datetime.now()} | Reward: {episode_reward} | Episode: {episode} | Epsilon: {epsilon}")
                     highest_reward = episode_reward
 
                     torch.save(policy_dqn.state_dict(), self.MODEL_FILE_BEST)
@@ -271,4 +272,11 @@ class Agent:
         self.optimiser.step() # Finally, with these new gradients, update the network parameters (weights and biases)
         # to ensure predicted q values are more accurate in the future
 
-Agent("oneplayerpong").run()
+
+parser = argparse.ArgumentParser(prog="PongRL")
+parser.add_argument("--train", action="store_true")
+parser.add_argument("--norender", action="store_true")
+
+args = parser.parse_args()
+
+Agent("oneplayerpong").run(training=args.train, render=not args.norender)
