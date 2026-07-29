@@ -11,16 +11,8 @@ BLUE = (0, 0, 255)
 
 pygame.init()
 
-
-# draws the paddle. Also restricts its movement between the edges
-# of the window.
 def drawrect(screen, x, y):
-    if x <= 0:
-        x = 0
-    if x >= 699:
-        x = 699
     pygame.draw.rect(screen, RED, [x, y, 100, 20])
-
 
 class Game:
     def __init__(self, render):

@@ -36,6 +36,7 @@ class Agent:
         self.network_sync_rate = hyperparameters["network_sync_rate"]
         self.model_save_rate = hyperparameters["model_save_rate_games"]
         self.use_ddqn = hyperparameters["double_dqn"]
+        self.use_dueling = hyperparameters["dueling_dqn"]
 
         # how much should the network adjust parameters at each step of optimisation
         # if it 'learns' too quickly, it may learn incorrectly
@@ -94,14 +95,14 @@ class Agent:
 
         # the policy dqn is the active, working network that actually decides the agent's current actions
         # (decides it's "policy")
-        policy_dqn = DQN(5, 3).to(device)
+        policy_dqn = DQN(5, 3, enable_dueling=self.use_dueling).to(device)
 
         if training:
             memory = ReplayMemory(self.memory_size)
 
             epsilon = self.epsilon_init
 
-            target_dqn = DQN(5, 3).to(device)
+            target_dqn = DQN(5, 3, enable_dueling=self.use_dueling).to(device)
             target_dqn.load_state_dict(policy_dqn.state_dict())
             step_count = 0
 
@@ -253,7 +254,6 @@ class Agent:
                 target_q = rewards + (1 - terminations) * self.discount_factor_gamma * target_dqn(new_states).gather(dim=1, index=best_actions_from_policy.unsqueeze(1)).squeeze()
 
 
-
         # current_q is the policy network's guess of how valuable its actions were
         # target_q is the more accurate calculation of what it was worth, using the bellman equation and
         # both the policy and target network
@@ -273,10 +273,10 @@ class Agent:
         # to ensure predicted q values are more accurate in the future
 
 
-parser = argparse.ArgumentParser(prog="PongRL")
-parser.add_argument("--train", action="store_true")
-parser.add_argument("--norender", action="store_true")
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog="PongRL")
+    parser.add_argument("--train", action="store_true")
+    parser.add_argument("--norender", action="store_true")
 
-args = parser.parse_args()
-
-Agent("oneplayerpong").run(training=args.train, render=not args.norender)
+    args = parser.parse_args()
+    Agent("oneplayerpong").run(training=args.train, render=not args.norender)

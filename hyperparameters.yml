@@ -9,3 +9,4 @@ oneplayerpong:
   discount_factor_gamma: 0.99
   model_save_rate_games: 5
   double_dqn: True
+  dueling_dqn: True
